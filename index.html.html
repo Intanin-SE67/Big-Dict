@@ -102,22 +102,44 @@ function displayData(data) {
     });
 }
 
+// 1. ฟังก์ชันส่งข้อมูลการค้นหาไปเก็บที่ MongoDB (เพิ่มเข้าไปใหม่)
+async function trackSearch(query, isFound) {
+    try {
+        await fetch('/api/log', {
+            method: 'POST',
+            body: JSON.stringify({
+                word: query,
+                found: isFound
+            })
+        });
+    } catch (err) {
+        // บันทึกความล้มเหลวไว้ใน Console (ไม่รบกวนผู้ใช้)
+        console.warn("Analytics saving skipped.");
+    }
+}
+
+// 2. ฟังก์ชันค้นหา (อัปเดตจากของเดิมเพื่อเพิ่มการเรียกใช้ trackSearch)
 function search() {
     const query = document.getElementById('search').value.toLowerCase().trim();
-    if (query === "") {
-        resultsDiv.innerHTML = '';
-        return;
+    
+    // ถ้าช่องค้นหาว่าง ให้ล้างผลลัพธ์และไม่ต้องส่งข้อมูลไปหลังบ้าน
+    if (query === "") { 
+        resultsDiv.innerHTML = ''; 
+        return; 
     }
 
-    const filteredData = dictionaryData.filter(item => {
-        return item.word.toLowerCase().includes(query) || 
-               item.meaning.toLowerCase().includes(query) || 
-               item.keyword.toLowerCase().includes(query);
-    });
+    const filtered = dictionaryData.filter(item => 
+        item.word.toLowerCase().includes(query) || 
+        item.meaning.toLowerCase().includes(query)
+    );
     
-    displayData(filteredData);
+    displayData(filtered);
+    
+    // บันทึกสถิติลง MongoDB อัตโนมัติทุกครั้งที่มีการค้นหา
+    trackSearch(query, filtered.length > 0);
 }
 </script>
 
 </body>
+
 </html>
