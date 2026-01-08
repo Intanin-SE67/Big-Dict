@@ -6,10 +6,10 @@ async function loadData() {
     try {
         const res = await fetch('/api/get-dictionary');
         dictionaryData = await res.json();
-        // ตรวจสอบใน Console ว่าข้อมูลที่มาถึงหน้าบ้าน หน้าตาเป็นอย่างไร
-        console.log("✅ ข้อมูลที่ดึงมาจาก MongoDB:", dictionaryData);
+        // 🔥 เพิ่มบรรทัดนี้: ให้แสดงข้อมูลทั้งหมดทันทีที่โหลดเสร็จ
+        renderResults(dictionaryData); 
     } catch (err) {
-        console.error("❌ ดึงข้อมูลไม่สำเร็จ:", err);
+        console.error("Load Error:", err);
     }
 }
 
