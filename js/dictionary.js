@@ -79,3 +79,36 @@ async function trackSearch(query, isFound) {
 }
 
 loadData();
+
+async function sendFeedback() {
+    const text = document.getElementById('feedback-text').value.trim();
+    const btn = document.getElementById('submit-btn');
+    const msg = document.getElementById('feedback-msg');
+
+    if (!text) {
+        alert("กรุณาพิมพ์ข้อความก่อนส่งนะครับ");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "กำลังส่ง...";
+
+    try {
+        const response = await fetch('/api/submit-feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        });
+
+        if (response.ok) {
+            document.getElementById('feedback-text').value = '';
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        }
+    } catch (err) {
+        alert("เกิดข้อผิดพลาดในการส่งข้อมูล");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "ส่งข้อความ";
+    }
+}
