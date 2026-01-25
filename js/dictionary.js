@@ -1,46 +1,54 @@
 let dictionaryData = [];
 
-// 1. โหลดข้อมูล (โหลดเงียบๆ ไว้ใน Memory ไม่แสดงผลทันที)
+// 1. ตรวจสอบคุ้กกี้และเริ่มระบบ
+function checkConsent() {
+    const consent = localStorage.getItem('cookie_consent');
+    const banner = document.getElementById('cookie-banner');
+    if (consent === 'accepted') {
+        if (banner) banner.style.display = 'none';
+        loadData(); 
+    } else {
+        if (banner) banner.style.display = 'flex';
+    }
+}
+
+// 2. โหลดข้อมูลจาก API (โหลดเก็บไว้ใน memory ไม่โชว์ทันที)
 async function loadData() {
     try {
         const res = await fetch('/api/get-dictionary');
         dictionaryData = await res.json();
-        // ลบ renderResults(dictionaryData) ออกจากตรงนี้ เพื่อไม่ให้โชว์ A-Z ตอนเริ่ม
+        // ไม่สั่ง renderResults(dictionaryData) ตรงนี้ เพื่อให้หน้าจอว่าง
     } catch (err) {
         console.error("Load Error:", err);
     }
 }
 
-// 2. ฟังก์ชันค้นหา (ปรับปรุงใหม่ให้แม่นยำ)
+// 3. ฟังก์ชันค้นหา (หาจากทุกช่อง แต่โชว์เฉพาะผลที่ตรง)
 function search() {
     const query = document.getElementById('search').value.toLowerCase().trim();
     const resultsDiv = document.getElementById('results');
     
-    // ถ้าช่องค้นหาว่าง ให้ล้างหน้าจอให้ว่างเปล่า
     if (!query) {
-        resultsDiv.innerHTML = '';
+        resultsDiv.innerHTML = ''; // ถ้าลบคำค้นหา หน้าจอต้องกลับมาว่าง
         return;
     }
 
     const cleanQuery = query.replace('#', '');
 
-    // กรองข้อมูล: ค้นหาจากทุกช่อง (รวม Tag, Note, Misspelled ที่ซ่อนไว้)
     const filtered = dictionaryData.filter(item => {
-        return (
-            (item.word || "").toLowerCase().includes(cleanQuery) ||
-            (item.meaning || "").toLowerCase().includes(cleanQuery) ||
-            (item.define || "").toLowerCase().includes(cleanQuery) ||
-            (item.tag || "").toLowerCase().includes(cleanQuery) || // ค้นจาก Tag
-            (item.note || "").toLowerCase().includes(cleanQuery) || // ค้นจาก Note
-            (item.keyword || "").toLowerCase().includes(cleanQuery) ||
-            (item.misspelled || "").toLowerCase().includes(cleanQuery)
-        );
+        // รวมทุกฟิลด์เข้าด้วยกันเพื่อค้นหา
+        const searchableText = [
+            item.word, item.meaning, item.define, item.pos, 
+            item.note, item.refer, item.tag, item.keyword, item.misspelled
+        ].join(" ").toLowerCase();
+        
+        return searchableText.includes(cleanQuery);
     });
 
     renderResults(filtered);
 }
 
-// 3. ฟังก์ชันแสดงผล (โชว์เฉพาะฟิลด์ที่ต้องการ)
+// 4. ฟังก์ชันแสดงผล (โชว์ 6 ช่อง: word, meaning, define, pos, note, refer)
 function renderResults(data) {
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML = data.length === 0 ? '<div class="no-result">ไม่พบคำศัพท์ที่ใกล้เคียง</div>' : '';
@@ -48,9 +56,6 @@ function renderResults(data) {
     data.forEach(item => {
         const div = document.createElement('div');
         div.className = 'card';
-        
-        // ตรงนี้จะโชว์เฉพาะ Word, Pos, Meaning, Define, Note, Refer
-        // ส่วน Tag, Keyword, Misspelled จะ 'ไม่ถูกเขียนลง HTML' (จึงมองไม่เห็นแต่หาเจอ)
         div.innerHTML = `
             <div class="word-header">
                 <div class="word-group">
@@ -61,11 +66,23 @@ function renderResults(data) {
             </div>
             <div class="definition">${item.define || ''}</div>
             ${item.note ? `<div class="note"><strong>Note:</strong> ${item.note}</div>` : ''}
-            ${item.refer ? `<div class="refer">อ้างอิง: ${item.refer}</div>` : ''}
+            ${item.refer ? `<div class="refer" style="font-size: 0.85em; color: #888; margin-top: 12px; border-top: 1px solid #eee; padding-top: 8px;">อ้างอิง: ${item.refer}</div>` : ''}
         `;
         resultsDiv.appendChild(div);
     });
 }
 
-// ส่วนของ Cookie และอื่นๆ คงเดิม...
+// ปุ่มคุ้กกี้และ Feedback (ส่วนเดิม)
+function acceptCookie() { localStorage.setItem('cookie_consent', 'accepted'); checkConsent(); }
+function declineCookie() { window.location.href = "https://www.google.com"; }
+async function sendFeedback() {
+    const text = document.getElementById('feedback-text').value.trim();
+    if (!text) return alert("กรุณาพิมพ์ข้อความก่อนส่งนะครับ");
+    try {
+        await fetch('/api/submit-feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) });
+        document.getElementById('feedback-text').value = '';
+        document.getElementById('feedback-msg').style.display = 'block';
+    } catch (e) { alert("เกิดข้อผิดพลาด"); }
+}
+
 window.onload = checkConsent;
