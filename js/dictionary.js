@@ -1,42 +1,19 @@
 let dictionaryData = [];
 
-// 1. ตรวจสอบคุ้กกี้และเริ่มระบบ
-function checkConsent() {
-    const consent = localStorage.getItem('cookie_consent');
-    const banner = document.getElementById('cookie-banner');
-    if (consent === 'accepted') {
-        if (banner) banner.style.display = 'none';
-        loadData(); 
-    } else {
-        if (banner) banner.style.display = 'flex';
-    }
-}
-
-// 2. โหลดข้อมูลจาก API (โหลดเก็บไว้ใน memory ไม่โชว์ทันที)
-async function loadData() {
-    try {
-        const res = await fetch('/api/get-dictionary');
-        dictionaryData = await res.json();
-        // ไม่สั่ง renderResults(dictionaryData) ตรงนี้ เพื่อให้หน้าจอว่าง
-    } catch (err) {
-        console.error("Load Error:", err);
-    }
-}
-
-// 3. ฟังก์ชันค้นหา (หาจากทุกช่อง แต่โชว์เฉพาะผลที่ตรง)
+// 1. ฟังก์ชันค้นหา (ย้ายขึ้นมาข้างบนเพื่อให้แน่ใจว่าถูกสร้างก่อนเรียกใช้)
 function search() {
     const query = document.getElementById('search').value.toLowerCase().trim();
     const resultsDiv = document.getElementById('results');
     
     if (!query) {
-        resultsDiv.innerHTML = ''; // ถ้าลบคำค้นหา หน้าจอต้องกลับมาว่าง
+        resultsDiv.innerHTML = ''; 
         return;
     }
 
     const cleanQuery = query.replace('#', '');
 
     const filtered = dictionaryData.filter(item => {
-        // รวมทุกฟิลด์เข้าด้วยกันเพื่อค้นหา
+        // ค้นหาทุกฟิลด์รวมถึงที่ซ่อนอยู่ (Tag, Misspelled, Note)
         const searchableText = [
             item.word, item.meaning, item.define, item.pos, 
             item.note, item.refer, item.tag, item.keyword, item.misspelled
@@ -48,9 +25,11 @@ function search() {
     renderResults(filtered);
 }
 
-// 4. ฟังก์ชันแสดงผล (โชว์ 6 ช่อง: word, meaning, define, pos, note, refer)
+// 2. ฟังก์ชันแสดงผล
 function renderResults(data) {
     const resultsDiv = document.getElementById('results');
+    if (!resultsDiv) return;
+    
     resultsDiv.innerHTML = data.length === 0 ? '<div class="no-result">ไม่พบคำศัพท์ที่ใกล้เคียง</div>' : '';
     
     data.forEach(item => {
@@ -72,17 +51,54 @@ function renderResults(data) {
     });
 }
 
-// ปุ่มคุ้กกี้และ Feedback (ส่วนเดิม)
-function acceptCookie() { localStorage.setItem('cookie_consent', 'accepted'); checkConsent(); }
-function declineCookie() { window.location.href = "https://www.google.com"; }
+// 3. ฟังก์ชันโหลดข้อมูล
+async function loadData() {
+    try {
+        const res = await fetch('/api/get-dictionary');
+        dictionaryData = await res.json();
+    } catch (err) {
+        console.error("Load Error:", err);
+    }
+}
+
+// 4. ฟังก์ชันจัดการ Cookie (ตัวการที่เกิด Error เมื่อกี้)
+function checkConsent() {
+    const consent = localStorage.getItem('cookie_consent');
+    const banner = document.getElementById('cookie-banner');
+    
+    if (consent === 'accepted') {
+        if (banner) banner.style.display = 'none';
+        loadData(); 
+    } else {
+        if (banner) banner.style.display = 'flex';
+    }
+}
+
+function acceptCookie() {
+    localStorage.setItem('cookie_consent', 'accepted');
+    checkConsent();
+}
+
+function declineCookie() {
+    window.location.href = "https://www.google.com";
+}
+
+// 5. ฟังก์ชันส่ง Feedback
 async function sendFeedback() {
     const text = document.getElementById('feedback-text').value.trim();
     if (!text) return alert("กรุณาพิมพ์ข้อความก่อนส่งนะครับ");
     try {
-        await fetch('/api/submit-feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }) });
+        await fetch('/api/submit-feedback', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ message: text }) 
+        });
         document.getElementById('feedback-text').value = '';
         document.getElementById('feedback-msg').style.display = 'block';
     } catch (e) { alert("เกิดข้อผิดพลาด"); }
 }
 
-window.onload = checkConsent;
+// 6. จุดเริ่มทำงาน (เรียกใช้ checkConsent หลังจากโหลดหน้าเสร็จ)
+window.onload = function() {
+    checkConsent();
+};
