@@ -11,36 +11,40 @@ function search() {
 
     const cleanQuery = query.replace('#', '');
 
-    // 1. กรองข้อมูลที่เกี่ยวข้องออกมาก่อน
+    // 1. กรองข้อมูลที่มีคำค้นหาปรากฏอยู่
     let filtered = dictionaryData.filter(item => {
         const searchableText = [
-            item.word, item.meaning, item.define, item.pos, 
-            item.note, item.refer, item.tag, item.keyword, item.misspelled
+            item.word, item.meaning, item.misspelled, item.keyword, 
+            item.note, item.tag, item.refer, item.related
         ].join(" ").toLowerCase();
         return searchableText.includes(cleanQuery);
     });
 
-    // 2. จัดลำดับความใกล้เคียง (Relevance Sorting)
+    // 2. จัดลำดับตามกฎความสำคัญ (1-8)
     filtered.sort((a, b) => {
-        const wordA = (a.word || "").toLowerCase();
-        const wordB = (b.word || "").toLowerCase();
-        const meaningA = (a.meaning || "").toLowerCase();
-        const meaningB = (b.meaning || "").toLowerCase();
+        function getScore(item) {
+            const q = cleanQuery;
+            // ลำดับความสำคัญ: 1.word > 2.meaning > 3.misspelled > 4.keyword > 5.note > 6.tag > 7.refer > 8.related
+            if ((item.word || "").toLowerCase().includes(q)) return 1;
+            if ((item.meaning || "").toLowerCase().includes(q)) return 2;
+            if ((item.misspelled || "").toLowerCase().includes(q)) return 3;
+            if ((item.keyword || "").toLowerCase().includes(q)) return 4;
+            if ((item.note || "").toLowerCase().includes(q)) return 5;
+            if ((item.tag || "").toLowerCase().includes(q)) return 6;
+            if ((item.refer || "").toLowerCase().includes(q)) return 7;
+            if ((item.related || "").toLowerCase().includes(q)) return 8;
+            return 99; // กรณีอื่นๆ
+        }
 
-        // กฎที่ 1: ถ้าคำศัพท์ (word) ตรงกับที่พิมพ์เป๊ะๆ ให้ขึ้นก่อน (Priority สูงสุด)
-        if (wordA === cleanQuery && wordB !== cleanQuery) return -1;
-        if (wordB === cleanQuery && wordA !== cleanQuery) return 1;
+        const scoreA = getScore(a);
+        const scoreB = getScore(b);
 
-        // กฎที่ 2: ถ้าคำศัพท์ (word) ขึ้นต้นด้วยคำที่พิมพ์
-        if (wordA.startsWith(cleanQuery) && !wordB.startsWith(cleanQuery)) return -1;
-        if (wordB.startsWith(cleanQuery) && !wordA.startsWith(cleanQuery)) return 1;
+        // ถ้าคะแนนความสำคัญเท่ากัน ให้เรียงตามความยาวคำศัพท์ (คำที่สั้นกว่า/ตรงกว่า ขึ้นก่อน)
+        if (scoreA === scoreB) {
+            return (a.word || "").length - (b.word || "").length;
+        }
 
-        // กฎที่ 3: ถ้าคำแปล (meaning) ตรงกับที่พิมพ์เป๊ะๆ
-        if (meaningA === cleanQuery && meaningB !== cleanQuery) return -1;
-        if (meaningB === cleanQuery && meaningA !== cleanQuery) return 1;
-
-        // กฎที่ 4: ถ้าไม่มีอะไรตรงเป๊ะ ให้เรียงตามปกติ
-        return 0;
+        return scoreA - scoreB; // คะแนนน้อยกว่า (ลำดับสูงกว่า) จะขึ้นก่อน
     });
 
     renderResults(filtered);
