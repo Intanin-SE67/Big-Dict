@@ -44,8 +44,8 @@ function search() {
         return scoreA - scoreB;
     });
 
-    // 3. 🔥 จำกัดผลลัพธ์ให้แสดงเพียง 10 อันดับแรก
-    const limitedResults = filtered.slice(0, 10);
+    // 3. 🔥 จำกัดผลลัพธ์ให้แสดงเพียง 5 อันดับแรกที่ตรงที่สุด
+    const limitedResults = filtered.slice(0, 5);
 
     renderResults(limitedResults);
 }
