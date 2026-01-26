@@ -1,6 +1,5 @@
 let dictionaryData = [];
 
-// 1. ฟังก์ชันค้นหา (ย้ายขึ้นมาข้างบนเพื่อให้แน่ใจว่าถูกสร้างก่อนเรียกใช้)
 function search() {
     const query = document.getElementById('search').value.toLowerCase().trim();
     const resultsDiv = document.getElementById('results');
@@ -12,14 +11,36 @@ function search() {
 
     const cleanQuery = query.replace('#', '');
 
-    const filtered = dictionaryData.filter(item => {
-        // ค้นหาทุกฟิลด์รวมถึงที่ซ่อนอยู่ (Tag, Misspelled, Note)
+    // 1. กรองข้อมูลที่เกี่ยวข้องออกมาก่อน
+    let filtered = dictionaryData.filter(item => {
         const searchableText = [
             item.word, item.meaning, item.define, item.pos, 
             item.note, item.refer, item.tag, item.keyword, item.misspelled
         ].join(" ").toLowerCase();
-        
         return searchableText.includes(cleanQuery);
+    });
+
+    // 2. จัดลำดับความใกล้เคียง (Relevance Sorting)
+    filtered.sort((a, b) => {
+        const wordA = (a.word || "").toLowerCase();
+        const wordB = (b.word || "").toLowerCase();
+        const meaningA = (a.meaning || "").toLowerCase();
+        const meaningB = (b.meaning || "").toLowerCase();
+
+        // กฎที่ 1: ถ้าคำศัพท์ (word) ตรงกับที่พิมพ์เป๊ะๆ ให้ขึ้นก่อน (Priority สูงสุด)
+        if (wordA === cleanQuery && wordB !== cleanQuery) return -1;
+        if (wordB === cleanQuery && wordA !== cleanQuery) return 1;
+
+        // กฎที่ 2: ถ้าคำศัพท์ (word) ขึ้นต้นด้วยคำที่พิมพ์
+        if (wordA.startsWith(cleanQuery) && !wordB.startsWith(cleanQuery)) return -1;
+        if (wordB.startsWith(cleanQuery) && !wordA.startsWith(cleanQuery)) return 1;
+
+        // กฎที่ 3: ถ้าคำแปล (meaning) ตรงกับที่พิมพ์เป๊ะๆ
+        if (meaningA === cleanQuery && meaningB !== cleanQuery) return -1;
+        if (meaningB === cleanQuery && meaningA !== cleanQuery) return 1;
+
+        // กฎที่ 4: ถ้าไม่มีอะไรตรงเป๊ะ ให้เรียงตามปกติ
+        return 0;
     });
 
     renderResults(filtered);
