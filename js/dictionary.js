@@ -100,28 +100,25 @@ function checkConsent() {
 
 // 2. ฟังก์ชันกดยอมรับ และส่งข้อมูลไปหลังบ้าน
 async function acceptCookie() {
-    // เก็บไว้ในเครื่องชั่วคราว (กันแบนเนอร์เด้งซ้ำตอนเปลี่ยนหน้าใน session เดียวกัน)
+    // 1. จำชั่วคราวในเซสชั่น (ถามใหม่เมื่อเปิดเบราว์เซอร์ใหม่)
     sessionStorage.setItem('cookie_consent', 'accepted');
 
-    // --- ส่วนที่ส่งข้อมูลไปหลังบ้าน ---
+    // 2. ส่งข้อมูลไปที่หลังบ้าน (Vercel API)
     try {
-        await fetch('/api/log-consent', {
+        await fetch('/api/log-consent', { // Vercel จะหาไฟล์ในโฟลเดอร์ api เอง
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 event: "user_accepted_cookies",
-                timestamp: new Date().toISOString(),
-                userAgent: navigator.userAgent // เก็บข้อมูลเบราว์เซอร์ของผู้ใช้
+                userAgent: navigator.userAgent
             })
         });
     } catch (err) {
-        console.error("Failed to log consent to server", err);
+        console.log("บันทึกไม่สำเร็จ แต่ใช้งานต่อได้");
     }
-    // ----------------------------
 
-    checkConsent();
+    checkConsent(); // ปิดแบนเนอร์
 }
-
 function declineCookie() {
     window.location.href = "https://www.google.com";
 }
