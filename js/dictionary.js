@@ -85,9 +85,9 @@ async function loadData() {
     }
 }
 
-// 4. ฟังก์ชันจัดการ Cookie (ตัวการที่เกิด Error เมื่อกี้)
+// 1. ตรวจสอบการยอมรับ (ใช้ sessionStorage เพื่อให้ถามใหม่ทุกรอบที่เปิดเว็บใหม่)
 function checkConsent() {
-    const consent = localStorage.getItem('cookie_consent');
+    const consent = sessionStorage.getItem('cookie_consent');
     const banner = document.getElementById('cookie-banner');
     
     if (consent === 'accepted') {
@@ -98,8 +98,27 @@ function checkConsent() {
     }
 }
 
-function acceptCookie() {
-    localStorage.setItem('cookie_consent', 'accepted');
+// 2. ฟังก์ชันกดยอมรับ และส่งข้อมูลไปหลังบ้าน
+async function acceptCookie() {
+    // เก็บไว้ในเครื่องชั่วคราว (กันแบนเนอร์เด้งซ้ำตอนเปลี่ยนหน้าใน session เดียวกัน)
+    sessionStorage.setItem('cookie_consent', 'accepted');
+
+    // --- ส่วนที่ส่งข้อมูลไปหลังบ้าน ---
+    try {
+        await fetch('/api/log-consent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                event: "user_accepted_cookies",
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent // เก็บข้อมูลเบราว์เซอร์ของผู้ใช้
+            })
+        });
+    } catch (err) {
+        console.error("Failed to log consent to server", err);
+    }
+    // ----------------------------
+
     checkConsent();
 }
 
