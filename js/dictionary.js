@@ -87,37 +87,37 @@ function renderResults(data) {
     });
 }
 
-// 3. ฟังก์ชันโหลดข้อมูล
+// 3. ฟังก์ชันโหลดข้อมูล (จะทำงานเมื่อกดยอมรับแล้วเท่านั้น)
 async function loadData() {
     try {
         const res = await fetch('/api/get-dictionary');
         dictionaryData = await res.json();
+        console.log("Data loaded successfully");
     } catch (err) {
         console.error("Load Error:", err);
     }
 }
 
-// 1. ตรวจสอบการยอมรับ (ใช้ sessionStorage เพื่อให้ถามใหม่ทุกรอบที่เปิดเว็บใหม่)
+// 1. ตรวจสอบการยอมรับ
 function checkConsent() {
     const consent = sessionStorage.getItem('cookie_consent');
     const banner = document.getElementById('cookie-banner');
     
     if (consent === 'accepted') {
         if (banner) banner.style.display = 'none';
-        loadData(); 
+        loadData(); // กดยอมรับแล้วถึงจะโหลดข้อมูล
     } else {
+        // ถ้ายังไม่ยอมรับ หรือปิดแท็บไปแล้วเปิดใหม่ ให้โชว์แบนเนอร์
         if (banner) banner.style.display = 'flex';
     }
 }
 
-// 2. ฟังก์ชันกดยอมรับ และส่งข้อมูลไปหลังบ้าน
+// 2. ฟังก์ชันกดยอมรับ
 async function acceptCookie() {
-    // 1. จำชั่วคราวในเซสชั่น (ถามใหม่เมื่อเปิดเบราว์เซอร์ใหม่)
     sessionStorage.setItem('cookie_consent', 'accepted');
 
-    // 2. ส่งข้อมูลไปที่หลังบ้าน (Vercel API)
     try {
-        await fetch('/api/log-consent', { // Vercel จะหาไฟล์ในโฟลเดอร์ api เอง
+        await fetch('/api/log-consent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -129,11 +129,17 @@ async function acceptCookie() {
         console.log("บันทึกไม่สำเร็จ แต่ใช้งานต่อได้");
     }
 
-    checkConsent(); // ปิดแบนเนอร์
+    checkConsent(); 
 }
+
+// 3. ฟังก์ชันไม่ยอมรับ
 function declineCookie() {
+    // ไม่บันทึกอะไรทั้งนั้น และส่งไป Google ทันที
     window.location.href = "https://www.google.com";
 }
+
+// --- สำคัญ: สั่งให้ทำงานทันทีที่เปิดเว็บ ---
+document.addEventListener('DOMContentLoaded', checkConsent);
 
 // 5. ฟังก์ชันส่ง Feedback
 async function sendFeedback() {
